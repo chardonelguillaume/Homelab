@@ -76,10 +76,12 @@ Why it's split this way: the switch routes the internal VLANs at full speed, and
 
 **Proof**
 
-![CORE-SW1 show vlan brief](screenshots/01-vlans.png)
+![CORE-SW1 show vlan brief](01-vlans.png)
+
 *CORE-SW1: every VLAN in place.*
 
-![IoT isolation test](screenshots/02-iot-isolation.jpg)
+![IoT isolation test](02-iot-isolation.jpg)
+
 *From the IoT VLAN: the internet works, but the domain controller (10.0.30.10) times out. That's the point.*
 
 **Break tests:** I took things down one at a time and wrote down what failed and what kept running.
@@ -90,7 +92,8 @@ Why it's split this way: the switch routes the internal VLANs at full speed, and
 | DC01 | Name lookups and DHCP renewals | Internet by IP (8.8.8.8). PCs kept their addresses until their leases run out |
 | DHCP relay (ip helper-address) | A PC on VLAN 20 couldn't get an address back | Everything else. Putting the helper line back fixed it |
 
-![pfSense down test](screenshots/03-break-test-pfsense-down.jpg)
+![pfSense down test](03-break-test-pfsense-down.jpg)
+
 *pfSense unplugged: 8.8.8.8 times out, but DC01 still answers and DNS still works.*
 
 Side finding: my phone's VPN uses DC01 for DNS, so when the lab went down the phone couldn't look anything up until I turned the tunnel off.
@@ -110,15 +113,18 @@ Side finding: my phone's VPN uses DC01 for DNS, so when the lab went down the ph
 
 **The restore test:** I wrote a marker file on a test VM, backed it up, deleted the VM, and restored it. All 20 GiB came back in 14.99 seconds with the marker file still there.
 
-![Restore in 15 seconds](screenshots/04-restore-15s.jpg)
+![Restore in 15 seconds](04-restore-15s.jpg)
+
 *Restore task: 14.99 s, TASK OK.*
 
 **Zabbix's first real alert was my own fault.** The switch showed as down by ping, but SNMP data was still coming in, so the switch was fine and something was blocking ping. My ACL only allowed SNMP from the Servers VLAN to Management. I added one line that permits ping from the Zabbix server only. I also tuned out false alerts from Windows services that only start on demand.
 
-![Switch alert](screenshots/05-zabbix-switch-alert.jpg)
+![Switch alert](05-zabbix-switch-alert.jpg)
+
 *The alert: CORE-SW1 unavailable by ICMP ping.*
 
-![All hosts green](screenshots/06-zabbix-all-green.jpg)
+![All hosts green](06-zabbix-all-green.jpg)
+
 *After the fix: the switch and pfSense green over SNMP, DC01 and the Zabbix server green over the agent.*
 
 **What I'd do at a real company:** keep an offline or offsite copy of the backups (3-2-1), send alerts to email or Teams with an on-call rotation, and use SNMPv3 everywhere.
@@ -133,7 +139,8 @@ Side finding: my phone's VPN uses DC01 for DNS, so when the lab went down the ph
 - A DHCP scope for the Trusted VLAN with reservations. DC01 sits on a different VLAN, so the switch relays DHCP to it with ip helper-address.
 - The Wazuh agent on DC01, sending its logs to WAZUH01.
 
-![Wazuh agent on DC01](screenshots/07-wazuh-dc01.jpg)
+![Wazuh agent on DC01](07-wazuh-dc01.jpg)
+
 *Wazuh: DC01 checked in as an active agent.*
 
 **What I'd do at a real company:** a second domain controller. The DC01 break test showed it's a single point of failure for DNS and DHCP.
@@ -152,7 +159,8 @@ Side finding: my phone's VPN uses DC01 for DNS, so when the lab went down the ph
 | Proxmox updates failed | `apt update` returned 401 from the paid enterprise repo | Disabled it and switched to the free repo |
 | Typos in the Zabbix config files | `grep -c` and `nginx -t` caught each one | Fixed each line before starting the services |
 
-![No default route](screenshots/08-no-default-route.png)
+![No default route](08-no-default-route.png)
+
 *Before the fix: "Gateway of last resort is not set," even though pfSense answers ping.*
 
 ## What's next
